@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+PyPDF2
+python-multipart
+pypdf
+selenium
+PyPDF2<3.0
+openpyxl
+xlwt
