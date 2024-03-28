@@ -11,8 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from openpyxl import Workbook
-import xlwt
-import urllib
+
 app = FastAPI()
 
 def read_pdf_text(file):
@@ -80,11 +79,11 @@ async def read_pdf_text_endpoint(file: UploadFile = File(...)):
          print(data)
     # print(data)    
     driver.close()
-    create_excel_with_data("Translated.xls", data) 
+    create_excel_with_data("file/Translated.xls", data) 
     output = io.BytesIO()
     
     output.seek(0)
-    file_path="Translated.xls"
+    file_path="file/Translated.xls"
 
     # Set response headers for file download
    
