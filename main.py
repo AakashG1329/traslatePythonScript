@@ -167,6 +167,9 @@ async def englishtotamil(file: UploadFile = File(...)):
         )
     id=0
     for val in result:
+         if(val=="APEUniPTEVocabList" or val=="Visitwww.apeuni.comformorestudymaterials"):
+             continue
+         val.replace('Pageof', '')
          text_input.send_keys(val)
          time.sleep(2)
          print(text_output.text) 
