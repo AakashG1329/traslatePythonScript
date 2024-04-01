@@ -11,7 +11,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from openpyxl import Workbook
-
+from xlsxwriter import Workbook
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 app = FastAPI()
 
 def read_pdf_text(file):
@@ -27,9 +28,11 @@ def create_excel_with_data(file_path, data):
 
     # Select the active worksheet
     ws = wb.active
+    ws.title="Translate"
 
     # Add data to the worksheet
     for row in data:
+        # ws.cell (row=1,column=row+1).value = ILLEGAL_CHARACTERS_RE.sub(r'',row)
         ws.append(row)
 
     # Save the workbook
@@ -48,13 +51,8 @@ async def read_pdf_text_endpoint(file: UploadFile = File(...)):
     pdf_content = await file.read()
     pdf_file = io.BytesIO(pdf_content)
     text = read_pdf_text(pdf_file)
-    print(text)
-    input_string = "3restaurant4intense5facilitate6fast7"
-
-# Split the string based on numeric characters
     result = re.split(r'\d+', text)
     data=[]
-# Remove empty strings from the result
     result = [item for item in result if item]
     # print(result)
     driver = webdriver.Chrome()
@@ -65,13 +63,11 @@ async def read_pdf_text_endpoint(file: UploadFile = File(...)):
     text_output = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//div[@id='tw-target-text-container']//pre/span[1]"))
         )
-
-        # Click the button
     data = [
     ['English', 'Tamil'],]
     for val in result:
          text_input.send_keys(val)
-         time.sleep(1)
+         time.sleep(5)
          print(text_output.text) 
          data2=[val,text_output.text]
          data.append(data2)
@@ -79,11 +75,11 @@ async def read_pdf_text_endpoint(file: UploadFile = File(...)):
          print(data)
     # print(data)    
     driver.close()
-    create_excel_with_data("file/Translated.xls", data) 
+    create_excel_with_data("file/Translated.xlsx", data) 
     output = io.BytesIO()
     
     output.seek(0)
-    file_path="file/Translated.xls"
+    file_path="file/Translated.xlsx"
 
     # Set response headers for file download
    
@@ -119,3 +115,75 @@ async def read_pdf_text_endpoint(file: UploadFile = File(...)):
 #     text = page.extract_text() 
 #     print(text) 
 #     return text
+@app.get("/trastlate")
+def transtlate(file_path: str, headers: dict, items: list):
+    
+    with Workbook(file_path) as workbook:
+        worksheet = workbook.add_worksheet()
+        worksheet.write_row(row=0, col=0, data=headers.values())
+        header_keys = list(headers.keys())
+        for index, item in enumerate(items):
+            row = map(lambda field_id: item.get(field_id, ''), header_keys)
+            worksheet.write_row(row=index + 1, col=0, data=row)
+
+headers = {
+    'id': 'User Id',
+    'name': 'Full Name',
+    'rating': 'Rating',
+}
+
+items = [
+    {'id': 1, 'name': "Ilir Meta", 'rating': 0.06},
+    {'id': 2, 'name': "Abdelmadjid Tebboune", 'rating': 4.0},
+    {'id': 3, 'name': "Alexander Lukashenko", 'rating': 3.1},
+    {'id': 4, 'name': "Miguel Díaz-Canel", 'rating': 0.32}
+]
+
+transtlate("my-xlsx-file.xlsx", headers, items)
+@app.post("/englishtotamil/file")
+async def englishtotamil(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Uploaded file is not a PDF.")
+    
+    pdf_content = await file.read()
+    pdf_file = io.BytesIO(pdf_content)
+    text = read_pdf_text(pdf_file)
+    result = re.split(r'\d+', text)
+    headers = {
+    'id':"Id",
+    'english': 'English',
+    'tamil': 'Tamil',
+}
+    items = []
+    result = [item for item in result if item]
+    # print(result)
+    driver = webdriver.Chrome()
+    driver.get("https://www.google.com/search?q=english+to+tamil")
+    text_input = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//textarea[@placeholder='Enter text']"))
+        )
+    text_output = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[@id='tw-target-text-container']//pre/span[1]"))
+        )
+    id=0
+    for val in result:
+         text_input.send_keys(val)
+         time.sleep(2)
+         print(text_output.text) 
+         id +=1
+
+         item1={"id":id,"english":val,"tamil":text_output.text}
+         items.append(item1)
+         text_input.clear()
+         print(items)
+    # print(data)    
+    driver.close()
+    file.filename.replace("pdf","")
+    with Workbook(file.filename+".xlsx") as workbook:
+        worksheet = workbook.add_worksheet()
+        worksheet.write_row(row=0, col=0, data=headers.values())
+        header_keys = list(headers.keys())
+        for index, item in enumerate(items):
+            row = map(lambda field_id: item.get(field_id, ''), header_keys)
+            worksheet.write_row(row=index + 1, col=0, data=row)
+    return {"message":"Done"}
