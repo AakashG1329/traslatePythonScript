@@ -153,36 +153,88 @@ async def englishtotamil(file: UploadFile = File(...)):
     'id':"Id",
     'english': 'English',
     'tamil': 'Tamil',
+    'v3rdPersonSingular':'V 3rd Person Singular',
+    'present':'Present',
+    'presentContinue':'Present Continue',
+    'past':'Past',
+    'future':'Future',
 }
-    items = []
+    
     result = [item for item in result if item]
     # print(result)
     driver = webdriver.Chrome()
     driver.get("https://www.google.com/search?q=english+to+tamil")
+    driver.execute_script("window.open('https://www.wordreference.com/es/translation.asp?tranword=')")
     text_input = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//textarea[@placeholder='Enter text']"))
         )
     text_output = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//div[@id='tw-target-text-container']//pre/span[1]"))
         )
+  
+    
+    windows = driver.window_handles
     id=0
+    items = []
     for val in result:
-         if(val=="APEUniPTEVocabList" or val=="Visitwww.apeuni.comformorestudymaterials"):
-             continue
-         val.replace('Pageof', '')
-         text_input.send_keys(val)
-         time.sleep(2)
-         print(text_output.text) 
-         id +=1
+        driver.switch_to.window(windows[0])
+        text_input.clear()
+        if(val=="APEUniPTEVocabList" or val=="Visitwww.apeuni.comformorestudymaterials" or val=="APEUniPTEVocabListVisitwww.apeuni.comformorestudymaterialsAPEUniPTEBasicVocab"):
+            continue
+        print(val)
+        if(val.lower().endswith('Pageof')):
+            val.replace('Pageof', '')
+        text_input.send_keys(val)
+        time.sleep(2)
+        translated=text_output.text
+        driver.switch_to.window(windows[1])
+        time.sleep(1)
+        
+        driver.get("https://www.wordreference.com/es/translation.asp?tranword="+val)
+        # verb_input = WebDriverWait(driver, 10).until(
+        #     EC.element_to_be_clickable((By.XPATH, "//input[@type='search']"))
+        # )
+        try:
+           v3rdPersonSingular = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//div[@class='inflectionsSection']//div/dl/dd[1]/dl/dt")) )
+           v3rdPersonSingular.text
+        except:
+            
+            v3rdPersonSingular="--"
 
-         item1={"id":id,"english":val,"tamil":text_output.text}
-         items.append(item1)
-         text_input.clear()
-         print(items)
+        try:
+           presentContinue = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[@class='inflectionsSection']//div/dl/dd[2]/dl/dt"))
+        )
+           presentContinue.text
+        except:
+           presentContinue="--"
+        try:
+           past = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[@class='inflectionsSection']//div/dl/dd[3]/dl/dt"))
+        )
+           past.text
+        except:
+           past="--"
+        try:
+            present = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[@class='inflectionsSection']//div/dl/dd[4]/dl/dt"))
+        )
+           present="Wil "+present.text
+        except:
+           present="--" 
+        id +=1
+       
+        # print(id,translated+"==",v3rdPersonSingular+"==",present+"==",presentContinue+"==",past+"==",present+"==")
+        item1={"id":id,"english":val,"tamil":translated,"v3rdPersonSingular":v3rdPersonSingular,"present":present,"presentContinue":presentContinue,"past":past,"future":present}
+       
+        items.append(item1)
+        
+        print(items)
     # print(data)    
     driver.close()
-    file.filename.replace("pdf","")
-    with Workbook(file.filename+".xlsx") as workbook:
+    fileName1:str=file.filename.replace(".pdf","")
+    print(fileName1)
+    with Workbook(fileName1+".xlsx") as workbook:
         worksheet = workbook.add_worksheet()
         worksheet.write_row(row=0, col=0, data=headers.values())
         header_keys = list(headers.keys())
